@@ -8,16 +8,20 @@ class SystemRenderer(object):
         pass
 
     def get_node_string(self, system, node):
+        # 🔧 repair
+        #  secondary vector
+        # 🛡️ - shield
+        # 💔 - kernel rot
         if node is None:
             return '   '
         if node.is_blocked:
             return f' x '
         elif node.is_visited and isinstance(node.token, Core):
-            return f'<C>'
+            return f'🖥️'
         elif node.is_visited and isinstance(node.token, Firewall):
-            return f'<F>'
+            return f'🔥 '
         elif system.selected_node == node:
-            path = system.get_path(node, system.core_node)
+            path = system.get_path(node, system.core.node)
             return '(' + str(min(len(path), 5)) + ')'
         elif node.is_visited:
             return '( )'
@@ -124,8 +128,8 @@ class SystemRenderer(object):
             screen.addstr(y, 0, f'VIRUS: ({system.virus.coherence}/{system.virus.strength})')
             y += 1
 
-        if system.core_node.is_visited:
-            screen.addstr(y, 0, f'CORE ({system.core_node.token.coherence}/{system.core_node.token.strength})')
+        if system.core.node.is_visited:
+            screen.addstr(y, 0, f'CORE ({system.core.coherence}/{system.core.strength})')
             y += 1
 
         screen.refresh()

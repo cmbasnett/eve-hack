@@ -33,7 +33,7 @@ class Node(object):
         self.block_count = 0
         self.input = 0
         self.num_neighbors = 0
-        self.token = None
+        self.__token = None
 
     @property
     def is_blocked(self):
@@ -44,6 +44,18 @@ class Node(object):
 
     def on_attacked(self):
         pass
+
+    @property
+    def token(self):
+        return self.__token
+
+    @token.setter
+    def token(self, x):
+        if self.__token is not None:
+            self.__token.node = None
+        self.__token = x
+        if self.__token is not None:
+            self.__token.node = self
 
 
 class BfsNode(object):
@@ -60,7 +72,7 @@ class System(object):
         self.height = 8
         self.nodes = []
         self.selected_node = None
-        self.core_node = None
+        self.core = None
         self.exposed_count = 0
         self.virus = Virus(self)
 
@@ -109,23 +121,23 @@ class System(object):
         node_at_jumps = self.get_nodes_at_jumps(starting_node, 5)
         waypoint = random.choice(node_at_jumps)
 
-        candidates = []
+        core_node_candidates = []
         for row in range(self.height):
             for col in range(self.width):
                 node = self.nodes[row][col]
                 sp = self.get_path(starting_node, node)
                 if sp is None or len(sp) < 8:
                     continue
-                candidates.append(self.nodes[row][col])
+                core_node_candidates.append(self.nodes[row][col])
 
         # Place down the core token
-        self.core_node = random.choice(candidates)
-        self.core_node.token = Core(self, self.core_node)
-        self.nodes[self.core_node.row][self.core_node.column] = self.core_node
+        core_node = random.choice(core_node_candidates)
+        self.core = Core(self)
+        core_node.token = self.core
 
         # Lock down a path to the core
         p = self.get_path(starting_node, waypoint)
-        q = self.get_path(waypoint, self.core_node)
+        q = self.get_path(waypoint, self.core.node)
         locked_nodes = set(p + q)
         locked_nodes.add(starting_node)
 
@@ -153,13 +165,13 @@ class System(object):
         for row in range(self.height):
             for col in range(self.width):
                 node = self.nodes[row][col]
-                if node is None:
+                if node is None or node == starting_node:
                     continue
-                if self.get_num_neighbors(node) < 6 or self.get_path(node, self.core_node) == 1:
+                if self.get_num_neighbors(node) < 6 or self.get_path(node, self.core.node) == 1:
                     population.append(node)
         firewall_nodes = random.choices(population, k=6)
         for node in firewall_nodes:
-            node.token = Firewall(self, node)
+            node.token = Firewall(self)
 
     def remove_node(self, node):
         for neighbor in self.get_neighbors(node):
@@ -380,8 +392,8 @@ class Virus(Token):
 
 class Core(Token):
 
-    def __init__(self, system, node=None):
-        super().__init__(system, node)
+    def __init__(self, system):
+        super().__init__(system)
         self.coherence = 70
         self.strength = 10
 
@@ -391,8 +403,8 @@ class Core(Token):
 
 class Firewall(Token):
 
-    def __init__(self, system, node=None):
-        super().__init__(system, node)
+    def __init__(self, system):
+        super().__init__(system)
         self.coherence = 80
         self.strength = 10
 
@@ -406,6 +418,23 @@ class Firewall(Token):
             neighbor.block_count += 1
 
     def on_destroyed(self):
-        super().on_destroyed()
         for neighbor in self.system.get_neighbors(self.node):
             neighbor.block_count -= 1
+        super().on_destroyed()
+
+# needs to be activated...can they be deactivated once activated?
+
+
+class Utility(Token):
+
+    def __init__(self, system):
+        super().__init__(system)
+
+    def activate(self):
+        pass
+
+
+class Repair(Utility):
+
+    def __init__(self):
+        pass
